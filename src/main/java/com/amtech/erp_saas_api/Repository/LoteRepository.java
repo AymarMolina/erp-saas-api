@@ -37,4 +37,13 @@ public interface LoteRepository extends JpaRepository<Lote, Integer> {
 
     @Query("SELECT l FROM Lote l WHERE l.producto.id = :productoId AND l.estado = 'AGOTADO'")
     List<Lote> findLotesAgotadosPorProducto(@Param("productoId") Integer productoId);
+
+    @Query("""
+        SELECT l FROM Lote l 
+        WHERE l.producto.empresa.id = :empresaId 
+          AND l.cantidadActual > 0 
+          AND l.estado = 'ACTIVO'
+        ORDER BY l.fechaVencimiento ASC
+    """)
+    List<Lote> findLotesDisponiblesByEmpresa(@Param("empresaId") Integer empresaId);
 }

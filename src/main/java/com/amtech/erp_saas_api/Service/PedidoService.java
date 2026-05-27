@@ -8,8 +8,6 @@ import com.amtech.erp_saas_api.DTO.Response.PedidoResponseDTO;
 import com.amtech.erp_saas_api.Entity.*;
 import com.amtech.erp_saas_api.Repository.*;
 import lombok.RequiredArgsConstructor;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

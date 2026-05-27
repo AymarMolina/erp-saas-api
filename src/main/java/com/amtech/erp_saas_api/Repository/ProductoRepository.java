@@ -26,6 +26,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
 
     List<Producto> findByEmpresaIdAndCategoriaIdAndEstadoTrue(Integer empresaId, Integer categoriaId);
 
+    List<Producto> findByEmpresaIdAndEstadoTrue(Integer empresaId);
+    
     @Query("""
         SELECT p FROM Producto p 
         WHERE p.empresa.id = :empresaId 

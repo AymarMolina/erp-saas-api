@@ -16,7 +16,7 @@ public interface CategoriaRepository extends JpaRepository<Categoria, Integer> {
 
     List<Categoria> findByEmpresaId(Integer empresaId);
 
-    @Query("SELECT c FROM Categoria c WHERE c.empresa.id = :empresaId AND c.estado = true ORDER BY c.nombre ASC")
+    @Query("SELECT c FROM Categoria c WHERE c.empresa.id = :empresaId ORDER BY c.nombre ASC")
     List<Categoria> findCategoriasActivasPorEmpresa(@Param("empresaId") Integer empresaId);
 
     boolean existsByEmpresaIdAndNombre(Integer empresaId, String nombre);

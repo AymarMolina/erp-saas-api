@@ -30,11 +30,17 @@ public class ProductoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ProductoResponseDTO>> buscar(
+    public ResponseEntity<List<ProductoResponseDTO>> listarOBuscar(
             @AuthenticationPrincipal ErpUserDetails userDetails,
-            @RequestParam String nombre) {
+            @RequestParam(required = false) String nombre) { // <-- required = false es la clave
 
-        return ResponseEntity.ok(productoService.buscarPorNombre(userDetails.getEmpresaId(), nombre));
+        if (nombre != null && !nombre.isBlank()) {
+            // Si envían un nombre, buscamos por coincidencias
+            return ResponseEntity.ok(productoService.buscarPorNombre(userDetails.getEmpresaId(), nombre));
+        }
+        
+        // Si no envían nombre, devolvemos todo el catálogo
+        return ResponseEntity.ok(productoService.listarTodos(userDetails.getEmpresaId()));
     }
 
     @GetMapping("/codigo/{codigoBarras}")
@@ -44,5 +50,18 @@ public class ProductoController {
 
         return ResponseEntity.ok(
                 productoService.buscarPorCodigoBarrasParaVenta(userDetails.getEmpresaId(), codigoBarras));
+    }
+
+
+    // Agrégalo debajo de tu método @PostMapping en ProductoController.java
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductoResponseDTO> actualizar(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @PathVariable Integer id,
+            @Valid @RequestBody ProductoRequestDTO request) {
+
+        return ResponseEntity.ok(
+                productoService.actualizarProducto(userDetails.getEmpresaId(), id, request));
     }
 }

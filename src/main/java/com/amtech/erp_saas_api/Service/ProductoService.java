@@ -57,6 +57,14 @@ public class ProductoService {
     }
 
     @Transactional(readOnly = true)
+    public List<ProductoResponseDTO> listarTodos(Integer empresaId) {
+        return productoRepository.findByEmpresaIdAndEstadoTrue(empresaId)
+                .stream()
+                .map(this::mapearAResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public ProductoResponseDTO buscarPorCodigoBarrasParaVenta(Integer empresaId, String codigoBarras) {
         Producto producto = productoRepository.findByEmpresaIdAndCodigoBarrasAndEstadoTrue(empresaId, codigoBarras)
                 .orElseThrow(() -> new RuntimeException("Producto no encontrado o inactivo: " + codigoBarras));
@@ -71,7 +79,43 @@ public class ProductoService {
                 .map(this::mapearAResponse)
                 .toList();
     }
+    // Agrégalo debajo de tu método crearProducto en ProductoService.java
 
+    // Agrégalo debajo de tu método crearProducto en ProductoService.java
+
+    @Transactional
+    public ProductoResponseDTO actualizarProducto(Integer empresaId, Integer id, ProductoRequestDTO request) {
+        
+        // 1. Buscamos el producto
+        Producto producto = productoRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new RuntimeException("Producto no encontrado o inactivo"));
+
+        // 2. Validamos que el nuevo código de barras no exista ya en OTRO producto de la misma empresa
+        if (request.codigoBarras() != null && !request.codigoBarras().isBlank() 
+            && !request.codigoBarras().equals(producto.getCodigoBarras())) {
+            
+            if (productoRepository.existsByEmpresaIdAndCodigoBarras(empresaId, request.codigoBarras())) {
+                throw new IllegalArgumentException("Ya existe otro producto con el código de barras: " + request.codigoBarras());
+            }
+        }
+
+        // 3. Validamos que las nuevas relaciones existan
+        Categoria categoria = categoriaRepository.findByIdAndEmpresaId(request.categoriaId(), empresaId)
+                .orElseThrow(() -> new RuntimeException("Categoría inválida o no autorizada"));
+
+        UnidadMedida unidadMedida = unidadMedidaRepository.findByIdAndEmpresaId(request.unidadMedidaId(), empresaId)
+                .orElseThrow(() -> new RuntimeException("Unidad de Medida inválida o no autorizada"));
+
+        // 4. Actualizamos los datos
+        producto.setCodigoBarras(request.codigoBarras());
+        producto.setNombre(request.nombre());
+        producto.setCategoria(categoria);
+        producto.setUnidadMedida(unidadMedida);
+        producto.setPrecioVenta(request.precioVenta());
+
+        // 5. Guardamos y retornamos
+        return mapearAResponse(productoRepository.save(producto));
+    }
     private ProductoResponseDTO mapearAResponse(Producto p) {
         return new ProductoResponseDTO(
                 p.getId(),

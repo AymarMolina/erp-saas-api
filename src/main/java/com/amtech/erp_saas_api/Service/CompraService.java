@@ -2,6 +2,8 @@ package com.amtech.erp_saas_api.Service;
 
 import com.amtech.erp_saas_api.DTO.Request.CompraRequestDTO;
 import com.amtech.erp_saas_api.DTO.Request.CompraDetalleRequestDTO;
+import com.amtech.erp_saas_api.DTO.Response.CompraResponseDTO;
+import com.amtech.erp_saas_api.DTO.Response.LoteResponseDTO;
 import com.amtech.erp_saas_api.Entity.*;
 import com.amtech.erp_saas_api.Repository.*;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +34,6 @@ public class CompraService {
         Proveedor proveedor = proveedorRepository.findByIdAndEmpresaId(request.proveedorId(), empresaId)
                 .orElseThrow(() -> new RuntimeException("Proveedor no encontrado."));
 
-        // Se mantiene usuarioId desde el token
         Usuario usuario = usuarioRepository.findById(usuarioId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado."));
 
@@ -73,5 +74,43 @@ public class CompraService {
         compra.setTotal(totalCompra);
 
         compraRepository.save(compra);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompraResponseDTO> listarCompras(Integer empresaId) {
+        return compraRepository.findByEmpresaIdOrderByFechaCompraDesc(empresaId)
+                .stream()
+                .map(c -> {
+                    List<LoteResponseDTO> lotesDTO = c.getLotes().stream()
+                            .map(l -> new LoteResponseDTO(
+                                    l.getId(),
+                                    l.getProducto().getId(),
+                                    l.getProducto().getNombre(),
+                                    c.getId(),
+                                    l.getCodigoLote(),
+                                    l.getFechaFabricacion(),
+                                    l.getFechaVencimiento(),
+                                    l.getCostoUnitario(),
+                                    l.getCantidadInicial(),
+                                    l.getCantidadActual(),
+                                    l.getEstado().name()
+                            ))
+                            .toList();
+
+                    return new CompraResponseDTO(
+                            c.getId(),
+                            c.getEmpresa().getId(),
+                            c.getProveedor().getId(),
+                            c.getProveedor().getRazonSocial(),
+                            c.getUsuario().getId(),
+                            c.getUsuario().getUsername(), 
+                            c.getFechaCompra(),
+                            c.getComprobante(),
+                            c.getTotal(),
+                            c.getEstado().name(),
+                            lotesDTO
+                    );
+                })      
+                .toList();
     }
 }
