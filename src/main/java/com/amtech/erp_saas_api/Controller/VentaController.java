@@ -1,6 +1,7 @@
 package com.amtech.erp_saas_api.Controller;
 
 import com.amtech.erp_saas_api.DTO.Request.VentaRequestDTO;
+import com.amtech.erp_saas_api.DTO.Response.VentaResponseDTO;
 import com.amtech.erp_saas_api.Entity.Venta;
 import com.amtech.erp_saas_api.Security.ErpUserDetails;
 import com.amtech.erp_saas_api.Service.VentaService;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -44,5 +46,10 @@ public class VentaController {
                     "error", e.getMessage()
             ));
         }
+    }
+    @GetMapping
+    public ResponseEntity<List<VentaResponseDTO>> listar(
+            @AuthenticationPrincipal ErpUserDetails userDetails) {
+        return ResponseEntity.ok(ventaService.listarVentas(userDetails.getEmpresaId()));
     }
 }

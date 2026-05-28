@@ -39,18 +39,6 @@ public class ClienteController {
                 clienteService.actualizarCliente(userDetails.getEmpresaId(), id, request));
     }
 
-    @GetMapping
-    public ResponseEntity<List<ClienteResponseDTO>> buscar(
-            @AuthenticationPrincipal ErpUserDetails userDetails,
-            @RequestParam(required = false) String nombre) {
-
-        if (nombre != null && !nombre.isBlank()) {
-            return ResponseEntity.ok(clienteService.buscarPorNombre(userDetails.getEmpresaId(), nombre));
-        }
-
-        return ResponseEntity.ok(List.of());
-    }
-
     @GetMapping("/documento/{documento}")
     public ResponseEntity<ClienteResponseDTO> buscarPorDocumento(
             @AuthenticationPrincipal ErpUserDetails userDetails,
@@ -58,5 +46,19 @@ public class ClienteController {
 
         return ResponseEntity.ok(
                 clienteService.buscarPorDocumento(userDetails.getEmpresaId(), documento));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ClienteResponseDTO>> buscar(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) String nombre) {
+
+        // Si mandan un nombre, buscamos por nombre
+        if (nombre != null && !nombre.isBlank()) {
+            return ResponseEntity.ok(clienteService.buscarPorNombre(userDetails.getEmpresaId(), nombre));
+        }
+
+        // Si no mandan nombre, devolvemos TODOS los clientes de la empresa
+        return ResponseEntity.ok(clienteService.obtenerTodosPorEmpresa(userDetails.getEmpresaId()));
     }
 }

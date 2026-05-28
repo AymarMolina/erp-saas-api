@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/roles").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/empresas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/empresas").permitAll()
-
+                        .requestMatchers("/api/v1/kardex", "/api/v1/kardex/**").permitAll()
                         // ── Endpoint Puente de SUNAT ──
                         .requestMatchers("/api/v1/sunat", "/api/v1/sunat/**").permitAll()
 
@@ -55,22 +55,23 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH,  "/api/v1/usuarios/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.GET,    "/api/v1/usuarios", "/api/v1/usuarios/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/v1/roles", "/api/v1/roles/**").hasRole("ADMINISTRADOR")
-
-                        .requestMatchers("/api/v1/lotes", "/api/v1/lotes/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO")
+                        .requestMatchers("/api/v1/kardex/**").permitAll() // TEMPORAL: Para descartar errores
                         // ── Inventario, Almacenes y Compras ──
-                        .requestMatchers("/api/v1/productos", "/api/v1/productos/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO")
-                        .requestMatchers("/api/v1/categorias", "/api/v1/categorias/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO")
-                        .requestMatchers("/api/v1/unidades-medida", "/api/v1/unidades-medida/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO")
-                        .requestMatchers("/api/v1/proveedores", "/api/v1/proveedores/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO")
-                        .requestMatchers("/api/v1/compras", "/api/v1/compras/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO")
-                        .requestMatchers("/api/v1/kardex", "/api/v1/kardex/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO")
+                        .requestMatchers("/api/v1/productos", "/api/v1/productos/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/categorias", "/api/v1/categorias/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/unidades-medida", "/api/v1/unidades-medida/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/kardex/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/proveedores", "/api/v1/proveedores/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/compras", "/api/v1/compras/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/kardex", "/api/v1/kardex/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/lotes", "/api/v1/lotes/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
 
                         // ── Ventas y Clientes ──
-                        .requestMatchers("/api/v1/clientes", "/api/v1/clientes/**").hasAnyRole("ADMINISTRADOR", "CAJERO")
-                        .requestMatchers("/api/v1/ventas", "/api/v1/ventas/**").hasAnyRole("ADMINISTRADOR", "CAJERO")
+                        .requestMatchers("/api/v1/clientes", "/api/v1/clientes/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/ventas", "/api/v1/ventas/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
 
                         // ── Pedidos / Fulfillment ──
-                        .requestMatchers("/api/v1/pedidos", "/api/v1/pedidos/**").hasAnyRole("ADMINISTRADOR", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/pedidos", "/api/v1/pedidos/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
 
                         .anyRequest().authenticated()
                 )

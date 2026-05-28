@@ -1,6 +1,7 @@
 package com.amtech.erp_saas_api.Service;
 
 import com.amtech.erp_saas_api.DTO.Request.VentaRequestDTO;
+import com.amtech.erp_saas_api.DTO.Response.VentaResponseDTO;
 import com.amtech.erp_saas_api.DTO.Request.VentaDetalleRequestDTO;
 import com.amtech.erp_saas_api.Entity.*;
 import com.amtech.erp_saas_api.Repository.*;
@@ -108,5 +109,43 @@ public class VentaService {
         };
         String uuidCorto = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
         return prefijo + uuidCorto;
+    }
+
+    @Transactional(readOnly = true)
+    public List<VentaResponseDTO> listarVentas(Integer empresaId) {
+        return ventaRepository.findByEmpresaIdOrderByFechaVentaDesc(empresaId)
+                .stream()
+                .map(v -> {
+                    // Mapeamos los detalles de la venta
+                    List<VentaResponseDTO.VentaDetalleResponseDTO> detallesDTO = v.getDetalle().stream()
+                            .map(d -> new VentaResponseDTO.VentaDetalleResponseDTO(
+                                    d.getId(),
+                                    d.getLote() != null ? d.getLote().getId() : null, 
+                                    d.getLote().getProducto().getNombre(),
+                                    d.getCantidad(),
+                                    d.getPrecioUnitario(),
+                                    d.getSubtotal()
+                            ))
+                            .toList();
+
+                    // Construimos tu DTO principal corrigiendo el enum y el username
+                    return new VentaResponseDTO(
+                            v.getId(),
+                            v.getEmpresa().getId(),
+                            v.getCliente().getId(),
+                            v.getCliente().getNombreCompleto(),
+                            v.getUsuario().getId(),
+                            v.getUsuario().getUsername(), 
+                            v.getFechaVenta(),
+                            v.getComprobante(),
+                            v.getTipoComprobante().name(),
+                            v.getSubtotalSinImpuesto(),
+                            v.getImpuestoTotal(),
+                            v.getTotal(),
+                            v.getEstado().name(),
+                            detallesDTO
+                    );
+                })
+                .toList();
     }
 }

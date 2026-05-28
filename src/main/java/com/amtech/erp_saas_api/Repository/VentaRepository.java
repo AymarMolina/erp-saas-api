@@ -21,6 +21,8 @@ public interface VentaRepository extends JpaRepository<Venta, Integer> {
 
     List<Venta> findByEmpresaIdAndClienteIdOrderByFechaVentaDesc(Integer empresaId, Integer clienteId);
 
+    List<Venta> findByEmpresaId(Integer empresaId);
+    
     @Query("""
         SELECT v FROM Venta v 
         WHERE v.empresa.id = :empresaId 

@@ -88,4 +88,11 @@ public class ClienteService {
                 cliente.getDireccion()
         );
     }
+    @Transactional(readOnly = true)
+    public List<ClienteResponseDTO> obtenerTodosPorEmpresa(Integer empresaId) {
+        return clienteRepository.findByEmpresaId(empresaId)
+                .stream()
+                .map(this::mapearAResponse)
+                .toList();
+    }
 }

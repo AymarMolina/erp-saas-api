@@ -57,4 +57,12 @@ public class PedidoController {
 
         return ResponseEntity.ok(pedidoService.asignarEmbalador(userDetails.getEmpresaId(), id, embaladorId));
     }
+    @GetMapping("/{id}")
+    public ResponseEntity<PedidoResponseDTO> obtenerPorId(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @PathVariable Integer id) {
+        
+        // Retorna el pedido con su List<PedidoDetalleResponseDTO> mapeado internamente
+        return ResponseEntity.ok(pedidoService.obtenerPorId(userDetails.getEmpresaId(), id));
+    }
 }

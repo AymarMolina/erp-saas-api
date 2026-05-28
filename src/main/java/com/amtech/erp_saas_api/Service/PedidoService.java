@@ -88,17 +88,22 @@ public class PedidoService {
         if (estadoAnterior == nuevoEstadoEnum) return toDTO(pedido);
 
         if (nuevoEstadoEnum == Pedido.EstadoPedido.ENTREGADO) {
-            // 1. Esto dispara el registro de venta, descuenta lotes y gatilla los TRIGGERS (Descuenta el stock físico real en BD)
-            VentaRequestDTO ventaRequest = convertirPedidoAVentaRequest(pedido);
-            ventaService.registrarVenta(empresaId, pedido.getVendedor().getId(), ventaRequest);
+            try {
+                // 🔥 1. PRIMERO liberamos la reserva directa para que el VentaService vea el stock disponible
+                for (PedidoDetalle detalle : pedido.getDetalle()) {
+                    productoRepository.restarStockReservado(detalle.getProducto().getId(), detalle.getCantidad());
+                }
 
-            // 2. Liberar reserva usando la consulta directa (Evita que Hibernate sobreescriba el stock físico)
-            for (PedidoDetalle detalle : pedido.getDetalle()) {
-                productoRepository.restarStockReservado(detalle.getProducto().getId(), detalle.getCantidad());
+                // 🔥 2. LUEGO registramos la venta (ahora pasará la validación de stock)
+                VentaRequestDTO ventaRequest = convertirPedidoAVentaRequest(pedido);
+                ventaService.registrarVenta(empresaId, pedido.getVendedor().getId(), ventaRequest);
+
+            } catch (Exception e) {
+                e.printStackTrace(); 
+                throw new RuntimeException("Fallo al crear la factura automática: " + e.getMessage());
             }
         }
         else if (nuevoEstadoEnum == Pedido.EstadoPedido.CANCELADO) {
-            // Al cancelar, también liberamos la reserva directamente
             for (PedidoDetalle detalle : pedido.getDetalle()) {
                 productoRepository.restarStockReservado(detalle.getProducto().getId(), detalle.getCantidad());
             }
@@ -163,6 +168,36 @@ public class PedidoService {
                 p.getEmbalador() != null ? p.getEmbalador().getNombreCompleto() : null,
                 p.getFechaPedido(),
                 p.getEstado().name(),
+                detallesDTO
+        );
+    }
+    @Transactional(readOnly = true)
+    public PedidoResponseDTO obtenerPorId(Integer empresaId, Integer id) {
+        Pedido pedido = pedidoRepository.findByIdAndEmpresaId(id, empresaId)
+                .orElseThrow(() -> new RuntimeException("Pedido no encontrado"));
+
+        // 1. Mapeamos la lista y calculamos el subtotal multiplicando en vivo
+        List<PedidoResponseDTO.DetalleDTO> detallesDTO = pedido.getDetalle().stream()
+                .map(d -> new PedidoResponseDTO.DetalleDTO(
+                        d.getId(),
+                        d.getProducto().getId(),
+                        d.getProducto().getNombre(),
+                        d.getCantidad(),
+                        d.getPrecioAcordado(),
+                        d.getCantidad().multiply(d.getPrecioAcordado()) 
+                )).toList();
+
+        return new PedidoResponseDTO(
+                pedido.getId(),
+                pedido.getEmpresa().getId(),
+                pedido.getCliente().getId(),
+                pedido.getCliente().getNombreCompleto(),
+                pedido.getVendedor().getId(),
+                pedido.getVendedor().getNombreCompleto(),
+                pedido.getEmbalador() != null ? pedido.getEmbalador().getId() : null,
+                pedido.getEmbalador() != null ? pedido.getEmbalador().getNombreCompleto() : null,
+                pedido.getFechaPedido(),
+                pedido.getEstado().name(),
                 detallesDTO
         );
     }
