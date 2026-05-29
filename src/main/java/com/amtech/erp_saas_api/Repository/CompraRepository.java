@@ -34,4 +34,8 @@ public interface CompraRepository extends JpaRepository<Compra, Integer> {
     boolean existsByEmpresaIdAndProveedorIdAndComprobante(Integer empresaId, Integer proveedorId, String comprobante);
 
     List<Compra> findByEmpresaIdAndUsuarioIdOrderByFechaCompraDesc(Integer empresaId, Integer usuarioId);
+
+    @Query("SELECT c FROM Compra c WHERE c.empresa.id = :empresaId AND c.saldoPendiente > 0 AND c.estado = 'COMPLETADA' ORDER BY c.fechaCompra DESC")
+    List<Compra> findComprasConDeudaPendiente(@Param("empresaId") Integer empresaId);
+
 }

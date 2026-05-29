@@ -1,6 +1,7 @@
 package com.amtech.erp_saas_api.DTO.Response;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -9,6 +10,7 @@ public record VentaResponseDTO(
         Integer empresaId,
         Integer clienteId,
         String clienteNombre,
+        String clienteDocumento,
         Integer usuarioId,
         String usuarioNombre,
         LocalDateTime fechaVenta,
@@ -18,6 +20,10 @@ public record VentaResponseDTO(
         BigDecimal impuestoTotal,
         BigDecimal total,
         String estado,
+        String condicionPago,
+        String estadoPago,
+        LocalDate fechaVencimiento,
+        BigDecimal saldoPendiente,
         List<VentaDetalleResponseDTO> detalle
 ) {
     public record VentaDetalleResponseDTO(

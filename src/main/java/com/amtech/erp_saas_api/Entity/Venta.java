@@ -79,4 +79,27 @@ public class Venta {
     public enum EstadoVenta { COMPLETADA, ANULADA }
 
     public enum TipoComprobante { TICKET, BOLETA, FACTURA }
+
+    // Agrega esto debajo de "estado" y antes de las listas/relaciones:
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "condicion_pago", nullable = false, length = 20)
+    @Builder.Default
+    private CondicionPago condicionPago = CondicionPago.CONTADO;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pago", nullable = false, length = 20)
+    @Builder.Default
+    private EstadoPago estadoPago = EstadoPago.PAGADO;
+
+    @Column(name = "fecha_vencimiento")
+    private java.time.LocalDate fechaVencimiento;
+
+    @Column(name = "saldo_pendiente", nullable = false, precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal saldoPendiente = BigDecimal.ZERO;
+
+    // Al final del archivo, junto a tus otros enums, agrega estos:
+    public enum CondicionPago { CONTADO, CREDITO }
+    public enum EstadoPago { PAGADO, PENDIENTE, PARCIAL }
 }

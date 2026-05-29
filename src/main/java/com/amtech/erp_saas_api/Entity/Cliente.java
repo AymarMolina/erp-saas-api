@@ -3,6 +3,8 @@ package com.amtech.erp_saas_api.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(
         name = "clientes",
@@ -41,4 +43,8 @@ public class Cliente {
 
     @Column(name = "direccion", length = 255)
     private String direccion;
+
+    @Column(name = "limite_credito", precision = 10, scale = 2)
+    @Builder.Default
+    private BigDecimal limiteCredito = BigDecimal.ZERO;
 }

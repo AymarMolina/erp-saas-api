@@ -34,4 +34,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
           AND u.estado = true
         """)
     List<Usuario> findEmbaladoresActivos(@Param("empresaId") Integer empresaId);
+
+    Optional<Usuario> findByIdAndEmpresaId(Integer id, Integer empresaId);
 }

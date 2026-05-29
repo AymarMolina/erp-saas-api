@@ -33,10 +33,8 @@ public class PedidoService {
         Cliente cliente = clienteRepository.findByIdAndEmpresaId(request.clienteId(), empresaId)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
 
-        Usuario vendedor = usuarioRepository.findByEmpresaIdAndRolId(empresaId, request.vendedorId())
-                .stream().findFirst()
-                .orElse(usuarioRepository.findById(request.vendedorId())
-                        .orElseThrow(() -> new RuntimeException("Vendedor no encontrado")));
+        Usuario vendedor = usuarioRepository.findByIdAndEmpresaId(request.vendedorId(), empresaId)
+                .orElseThrow(() -> new RuntimeException("Vendedor no encontrado con id: " + request.vendedorId()));
 
         Usuario embalador = null;
         if (request.embaladorId() != null) {
@@ -117,8 +115,15 @@ public class PedidoService {
         List<VentaDetalleRequestDTO> detalles = pedido.getDetalle().stream()
                 .map(d -> new VentaDetalleRequestDTO(d.getProducto().getId(), d.getCantidad()))
                 .toList();
-
-        return new VentaRequestDTO(pedido.getCliente().getId(), Venta.TipoComprobante.FACTURA, detalles);
+        return new VentaRequestDTO(
+                pedido.getCliente().getId(),
+                Venta.TipoComprobante.FACTURA,
+                Venta.CondicionPago.CONTADO,
+                null,
+                null,
+                null,
+                detalles
+        );
     }
 
     @Transactional

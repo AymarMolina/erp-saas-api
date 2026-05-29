@@ -56,22 +56,25 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,    "/api/v1/usuarios", "/api/v1/usuarios/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/v1/roles", "/api/v1/roles/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/v1/kardex/**").permitAll() // TEMPORAL: Para descartar errores
+
                         // ── Inventario, Almacenes y Compras ──
                         .requestMatchers("/api/v1/productos", "/api/v1/productos/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
                         .requestMatchers("/api/v1/categorias", "/api/v1/categorias/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
                         .requestMatchers("/api/v1/unidades-medida", "/api/v1/unidades-medida/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
-                        .requestMatchers("/api/v1/kardex/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
                         .requestMatchers("/api/v1/proveedores", "/api/v1/proveedores/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
                         .requestMatchers("/api/v1/compras", "/api/v1/compras/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
-                        .requestMatchers("/api/v1/kardex", "/api/v1/kardex/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
                         .requestMatchers("/api/v1/lotes", "/api/v1/lotes/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
 
-                        // ── Ventas y Clientes ──
+                        // ── Ventas, Clientes y Créditos ──
                         .requestMatchers("/api/v1/clientes", "/api/v1/clientes/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
                         .requestMatchers("/api/v1/ventas", "/api/v1/ventas/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+                        .requestMatchers("/api/v1/creditos", "/api/v1/creditos/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
 
                         // ── Pedidos / Fulfillment ──
                         .requestMatchers("/api/v1/pedidos", "/api/v1/pedidos/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+
+                        // ── Reportes ──
+                        .requestMatchers("/api/v1/reportes", "/api/v1/reportes/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
 
                         .anyRequest().authenticated()
                 )
@@ -86,10 +89,10 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
-        configuration.setAllowCredentials(true); 
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); 
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 

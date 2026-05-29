@@ -25,6 +25,7 @@ public class VentaService {
     private final EmpresaRepository empresaRepository;
     private final ClienteRepository clienteRepository;
     private final UsuarioRepository usuarioRepository;
+    private final AbonoVentaRepository abonoVentaRepository;
 
     @Transactional
     public Venta registrarVenta(Integer empresaId, Integer usuarioId, VentaRequestDTO request) {
@@ -98,7 +99,74 @@ public class VentaService {
         venta.setTotal(totalVenta);
         venta.setDetalle(listaDetalles);
 
-        return ventaRepository.save(venta);
+        // =========================================================================
+        // ↓ NUEVA LÓGICA DE CRÉDITOS Y CONDICIONES DE PAGO ↓
+        // =========================================================================
+        Venta.CondicionPago condicion = request.condicionPago() != null ? request.condicionPago() : Venta.CondicionPago.CONTADO;
+        venta.setCondicionPago(condicion);
+
+        if (condicion == Venta.CondicionPago.CREDITO) {
+            if (cliente == null) {
+                throw new RuntimeException("Las ventas a crédito requieren un cliente registrado obligatoriamente.");
+            }
+
+            // 1. Calcular deuda actual del cliente
+            BigDecimal deudaActualDelCliente = ventaRepository.findByEmpresaIdAndClienteIdOrderByFechaVentaDesc(empresaId, cliente.getId())
+                    .stream()
+                    .map(Venta::getSaldoPendiente)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // 2. Proyectar nueva deuda sumando esta venta
+            BigDecimal proximaDeuda = deudaActualDelCliente.add(totalVenta);
+
+            // 3. Validar límite (Si el límite es mayor a 0, se valida)
+            if (cliente.getLimiteCredito() != null &&
+                    cliente.getLimiteCredito().compareTo(BigDecimal.ZERO) > 0 &&
+                    proximaDeuda.compareTo(cliente.getLimiteCredito()) > 0) {
+                throw new RuntimeException("Crédito rechazado. El cliente superaría su límite de S/ " + cliente.getLimiteCredito());
+            }
+
+            // 4. Configurar la venta a crédito
+            venta.setSaldoPendiente(totalVenta); // Inicia debiendo todo
+            venta.setEstadoPago(Venta.EstadoPago.PENDIENTE);
+            int dias = request.diasCredito() != null ? request.diasCredito() : 0;
+            venta.setFechaVencimiento(java.time.LocalDate.now().plusDays(dias));
+
+        } else {
+            // Venta al contado normal
+            venta.setSaldoPendiente(BigDecimal.ZERO);
+            venta.setEstadoPago(Venta.EstadoPago.PAGADO);
+        }
+        // =========================================================================
+
+        // Guardamos la Venta
+        Venta ventaGuardada = ventaRepository.save(venta);
+
+        // =========================================================================
+        // ↓ REGISTRAR PAGO INICIAL / ADELANTO (SI ES A CRÉDITO Y DEJÓ DINERO) ↓
+        // =========================================================================
+        if (condicion == Venta.CondicionPago.CREDITO && request.pagoInicial() != null && request.pagoInicial().compareTo(BigDecimal.ZERO) > 0) {
+
+            if (request.pagoInicial().compareTo(totalVenta) > 0) {
+                throw new RuntimeException("El adelanto no puede ser mayor al total de la venta.");
+            }
+
+            AbonoVenta abono = AbonoVenta.builder()
+                    .venta(ventaGuardada)
+                    .usuario(usuario)
+                    .monto(request.pagoInicial())
+                    .metodoPago(request.metodoPagoInicial() != null ? request.metodoPagoInicial() : "EFECTIVO")
+                    .referencia("Adelanto inicial en POS")
+                    .build();
+
+            // Nota: Asegúrate de tener declarado: private final AbonoVentaRepository abonoVentaRepository;
+            abonoVentaRepository.save(abono);
+
+            // ¡Magia!: El trigger de la Base de Datos actualizará el 'saldo_pendiente' automáticamente.
+        }
+        // =========================================================================
+
+        return ventaGuardada;
     }
 
     private String generarNumeroComprobante(Venta.TipoComprobante tipo) {
@@ -120,7 +188,7 @@ public class VentaService {
                     List<VentaResponseDTO.VentaDetalleResponseDTO> detallesDTO = v.getDetalle().stream()
                             .map(d -> new VentaResponseDTO.VentaDetalleResponseDTO(
                                     d.getId(),
-                                    d.getLote() != null ? d.getLote().getId() : null, 
+                                    d.getLote() != null ? d.getLote().getId() : null,
                                     d.getLote().getProducto().getNombre(),
                                     d.getCantidad(),
                                     d.getPrecioUnitario(),
@@ -128,14 +196,15 @@ public class VentaService {
                             ))
                             .toList();
 
-                    // Construimos tu DTO principal corrigiendo el enum y el username
+                    // Construimos el DTO principal de manera segura (evitando NullPointerException si no hay cliente)
                     return new VentaResponseDTO(
                             v.getId(),
                             v.getEmpresa().getId(),
-                            v.getCliente().getId(),
-                            v.getCliente().getNombreCompleto(),
+                            v.getCliente() != null ? v.getCliente().getId() : null,
+                            v.getCliente() != null ? v.getCliente().getNombreCompleto() : null,
+                            v.getCliente() !=null ? v.getCliente().getDocumentoIdentidad():null,
                             v.getUsuario().getId(),
-                            v.getUsuario().getUsername(), 
+                            v.getUsuario().getUsername(),
                             v.getFechaVenta(),
                             v.getComprobante(),
                             v.getTipoComprobante().name(),
@@ -143,6 +212,13 @@ public class VentaService {
                             v.getImpuestoTotal(),
                             v.getTotal(),
                             v.getEstado().name(),
+
+                            // --- MAPEO DE LOS NUEVOS CAMPOS ---
+                            v.getCondicionPago().name(),
+                            v.getEstadoPago().name(),
+                            v.getFechaVencimiento(),
+                            v.getSaldoPendiente(),
+
                             detallesDTO
                     );
                 })

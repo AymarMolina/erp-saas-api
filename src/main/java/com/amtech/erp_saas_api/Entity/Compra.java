@@ -61,5 +61,35 @@ public class Compra {
         if (fechaCompra == null) fechaCompra = LocalDateTime.now();
     }
 
-    public enum EstadoCompra { COMPLETADA, ANULADA }
+    @Enumerated(EnumType.STRING)
+    @Column(name = "condicion_pago", nullable = false)
+    private CondicionPago condicionPago;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "estado_pago", nullable = false)
+    private EstadoPago estadoPago;
+
+    @Column(name = "fecha_vencimiento")
+    private java.time.LocalDate fechaVencimiento;
+
+    @Column(name = "saldo_pendiente", nullable = false, precision = 10, scale = 2)
+    private BigDecimal saldoPendiente;
+
+    // Relación para traer todos los pagos que se le han hecho a esta compra
+    @OneToMany(mappedBy = "compra", cascade = CascadeType.ALL)
+    private List<PagoProveedor> pagos;
+
+    // --- ENUMS PARA COMPRAS ---
+
+    public enum EstadoCompra {
+        COMPLETADA, ANULADA
+    }
+
+    public enum CondicionPago {
+        CONTADO, CREDITO
+    }
+
+    public enum EstadoPago {
+        PAGADO, PENDIENTE, PARCIAL
+    }
 }

@@ -21,4 +21,7 @@ public interface ProveedorRepository extends JpaRepository<Proveedor, Integer> {
     boolean existsByEmpresaIdAndDocumentoIdentidad(Integer empresaId, String documentoIdentidad);
 
     List<Proveedor> findByEmpresaIdAndRazonSocialContainingIgnoreCaseAndEstadoTrue(Integer empresaId, String razonSocial);
+
+    // En tu ProveedorRepository.java
+    List<Proveedor> findByEmpresaId(Long empresaId);
 }
