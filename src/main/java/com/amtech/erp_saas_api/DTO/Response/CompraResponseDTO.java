@@ -10,6 +10,7 @@ public record CompraResponseDTO(
         Integer empresaId,
         Integer proveedorId,
         String proveedorRazonSocial,
+        String documentoIdentidad,
         Integer usuarioId,
         String usuarioNombre,
         LocalDateTime fechaCompra,

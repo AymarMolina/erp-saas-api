@@ -18,6 +18,9 @@ public record CompraRequestDTO(
         BigDecimal pagoInicial,
         String metodoPagoInicial,
 
+        @NotNull(message = "El porcentaje de IGV es obligatorio")
+        BigDecimal igvPorcentaje,
+
         @NotEmpty(message = "Debe ingresar al menos un producto en la compra")
         @Valid
         List<CompraDetalleRequestDTO> detalles

@@ -49,4 +49,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
             @Param("inicio") LocalDateTime inicio,
             @Param("fin") LocalDateTime fin
     );
+
+    @Query("SELECT COUNT(p) FROM Pedido p WHERE p.empresa.id = :empresaId AND p.estado IN ('PENDIENTE', 'EMPAQUETANDO')")
+    Integer contarPedidosPendientes(@Param("empresaId") Integer empresaId);
 }

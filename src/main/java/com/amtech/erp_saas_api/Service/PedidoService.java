@@ -115,6 +115,10 @@ public class PedidoService {
         List<VentaDetalleRequestDTO> detalles = pedido.getDetalle().stream()
                 .map(d -> new VentaDetalleRequestDTO(d.getProducto().getId(), d.getCantidad()))
                 .toList();
+
+        // Extraemos el IGV por defecto de la empresa para esta venta automática
+        java.math.BigDecimal igvPorcentaje = pedido.getEmpresa().getIgvPorcentaje();
+
         return new VentaRequestDTO(
                 pedido.getCliente().getId(),
                 Venta.TipoComprobante.FACTURA,
@@ -122,6 +126,7 @@ public class PedidoService {
                 null,
                 null,
                 null,
+                igvPorcentaje, // <-- EL NUEVO CAMPO AGREGADO AQUÍ
                 detalles
         );
     }

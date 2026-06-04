@@ -50,6 +50,9 @@ public class Usuario {
     @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
 
+    @Column(name = "foto_url", length = 500)
+    private String fotoUrl;
+
     @PrePersist
     public void prePersist() {
         if (fechaCreacion == null) fechaCreacion = LocalDateTime.now();

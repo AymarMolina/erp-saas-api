@@ -79,6 +79,12 @@ public class Compra {
     @OneToMany(mappedBy = "compra", cascade = CascadeType.ALL)
     private List<PagoProveedor> pagos;
 
+    @Column(name = "subtotal_sin_impuesto", nullable = false, precision = 10, scale = 2)
+    private BigDecimal subtotalSinImpuesto;
+
+    @Column(name = "impuesto_total", nullable = false, precision = 10, scale = 2)
+    private BigDecimal impuestoTotal;
+
     // --- ENUMS PARA COMPRAS ---
 
     public enum EstadoCompra {

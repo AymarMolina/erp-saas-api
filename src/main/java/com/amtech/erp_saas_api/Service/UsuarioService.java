@@ -1,5 +1,6 @@
 package com.amtech.erp_saas_api.Service;
 
+import com.amtech.erp_saas_api.DTO.Request.PerfilRequestDTO;
 import com.amtech.erp_saas_api.DTO.Request.UsuarioRequestDTO;
 import com.amtech.erp_saas_api.DTO.Response.UsuarioResponseDTO;
 import com.amtech.erp_saas_api.Entity.Empresa;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -22,6 +24,7 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final EmpresaRepository empresaRepository;
     private final RolRepository rolRepository;
+    private final ArchivoService archivoService;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -105,7 +108,36 @@ public class UsuarioService {
                 u.getRol().getId(),
                 u.getRol().getNombre(),
                 u.getEstado(),
-                u.getFechaCreacion()
+                u.getFechaCreacion(),
+                u.getFotoUrl()
         );
+    }
+    @Transactional
+    public UsuarioResponseDTO actualizarFotoPerfil(Integer usuarioId, Integer empresaId, MultipartFile archivo) {
+        Usuario usuario = usuarioRepository.findByIdAndEmpresaId(usuarioId, empresaId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        if (usuario.getFotoUrl() != null && !usuario.getFotoUrl().isBlank()) {
+            archivoService.eliminar(usuario.getFotoUrl());
+        }
+        String url = archivoService.guardar(archivo, "fotos-perfil");
+        usuario.setFotoUrl(url);
+
+        return toDTO(usuarioRepository.save(usuario));
+    }
+    @Transactional
+    public UsuarioResponseDTO actualizarMiPerfil(Integer usuarioId, Integer empresaId, PerfilRequestDTO request) {
+        // Usamos el repositorio para asegurar que el usuario pertenece a la empresa
+        Usuario usuario = usuarioRepository.findByIdAndEmpresaId(usuarioId, empresaId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        usuario.setNombreCompleto(request.nombreCompleto());
+
+        // Solo si envía un nuevo password, lo hasheamos y guardamos
+        if (request.password() != null && !request.password().isBlank()) {
+            usuario.setPasswordHash(passwordEncoder.encode(request.password()));
+        }
+
+        return toDTO(usuarioRepository.save(usuario));
     }
 }

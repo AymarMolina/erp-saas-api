@@ -37,6 +37,10 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/uploads/**").permitAll()
+
+                        // 🔥 NUEVO: Permitir la ruta de error de Spring Boot para evitar Falsos 403
+                        .requestMatchers("/error").permitAll()
 
                         // ── Rutas 100% Públicas ──
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
@@ -45,15 +49,16 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/empresas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/empresas").permitAll()
                         .requestMatchers("/api/v1/kardex", "/api/v1/kardex/**").permitAll()
+
                         // ── Endpoint Puente de SUNAT ──
                         .requestMatchers("/api/v1/sunat", "/api/v1/sunat/**").permitAll()
 
                         // ── Gestión Interna de la Empresa (ADMINISTRADOR) ──
                         .requestMatchers(HttpMethod.GET,   "/api/v1/empresas/{id}").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.PATCH, "/api/v1/empresas/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.PUT,    "/api/v1/usuarios/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.PUT,   "/api/v1/usuarios/**").hasRole("ADMINISTRADOR")
                         .requestMatchers(HttpMethod.PATCH,  "/api/v1/usuarios/**").hasRole("ADMINISTRADOR")
-                        .requestMatchers(HttpMethod.GET,    "/api/v1/usuarios", "/api/v1/usuarios/**").hasRole("ADMINISTRADOR")
+                        .requestMatchers(HttpMethod.GET,   "/api/v1/usuarios", "/api/v1/usuarios/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/v1/roles", "/api/v1/roles/**").hasRole("ADMINISTRADOR")
                         .requestMatchers("/api/v1/kardex/**").permitAll() // TEMPORAL: Para descartar errores
 
@@ -75,6 +80,9 @@ public class SecurityConfig {
 
                         // ── Reportes ──
                         .requestMatchers("/api/v1/reportes", "/api/v1/reportes/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
+
+                        // ── Dashboard (NUEVO) ──
+                        .requestMatchers("/api/v1/dashboard", "/api/v1/dashboard/**").hasAnyRole("ADMINISTRADOR", "ALMACENERO", "CAJERO", "EMBALADOR")
 
                         .anyRequest().authenticated()
                 )

@@ -19,28 +19,19 @@ public class AuthService {
 
     public LoginResponseDTO login(LoginRequestDTO request) {
 
-        // 1. Buscar usuario por empresa + username (constraint único en BD)
         Usuario usuario = usuarioRepository
                 .findByEmpresaIdAndUsername(request.empresaId(), request.username())
                 .orElseThrow(() -> new RuntimeException("Credenciales inválidas"));
 
-        // 2. Verificar que la cuenta esté activa
         if (!usuario.getEstado()) {
             throw new RuntimeException("Usuario inactivo. Contacte al administrador.");
         }
 
-        // 3. Verificar contraseña
         if (!passwordEncoder.matches(request.password(), usuario.getPasswordHash())) {
             throw new RuntimeException("Credenciales inválidas");
         }
 
-        // 4. Generar JWT con datos del usuario
-        String token = jwtService.generarToken(
-                usuario.getId(),
-                usuario.getUsername(),
-                usuario.getEmpresa().getId(),
-                usuario.getRol().getNombre()
-        );
+        String token = jwtService.generarToken(usuario);
 
         return new LoginResponseDTO(
                 token,
@@ -48,7 +39,8 @@ public class AuthService {
                 usuario.getNombreCompleto(),
                 usuario.getUsername(),
                 usuario.getEmpresa().getId(),
-                usuario.getRol().getNombre()
+                usuario.getRol().getNombre(),
+                usuario.getEmpresa().getIgvPorcentaje()
         );
     }
 }

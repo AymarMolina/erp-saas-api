@@ -4,6 +4,7 @@ import com.amtech.erp_saas_api.Entity.*;
 import com.amtech.erp_saas_api.Repository.*;
 import com.amtech.erp_saas_api.Security.ErpUserDetails;
 import com.amtech.erp_saas_api.Service.ExcelExportService;
+import com.amtech.erp_saas_api.Service.PdfExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -27,109 +28,368 @@ public class ReporteController {
 
     private final VentaRepository ventaRepository;
     private final KardexRepository kardexRepository;
-    private final ExcelExportService excelExportService;
     private final ProveedorRepository proveedorRepository;
     private final ClienteRepository clienteRepository;
     private final AbonoVentaRepository abonoVentaRepository;
     private final CompraRepository compraRepository;
     private final PagoProveedorRepository pagoProveedorRepository;
+    private final EmpresaRepository empresaRepository;
+
+    private final ExcelExportService excelExportService;
+    private final PdfExportService pdfExportService;
+
+    // ==========================================
+    // 1. VENTAS
+    // ==========================================
     @GetMapping("/ventas/excel")
-    public ResponseEntity<Resource> reporteDeVentas(
+    public ResponseEntity<Resource> reporteDeVentasExcel(
             @AuthenticationPrincipal ErpUserDetails userDetails,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) throws IOException {
 
-        List<Venta> ventas;
-        if (inicio != null && fin != null) {
-            ventas = ventaRepository.findVentasPorRangoFechas(userDetails.getEmpresaId(), inicio.atStartOfDay(), fin.atTime(23, 59, 59));
-        } else {
-            ventas = ventaRepository.findByEmpresaIdOrderByFechaVentaDesc(userDetails.getEmpresaId());
-        }
+        List<Venta> ventas = obtenerVentas(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
 
-        ByteArrayInputStream stream = excelExportService.exportarVentas(ventas);
+        ByteArrayInputStream stream = excelExportService.exportarVentas(ventas, logoUrl, inicio, fin);
         return generarRespuestaExcel(stream, "ventas.xlsx");
     }
 
-    @GetMapping("/kardex/excel")
-    public ResponseEntity<Resource> reporteDeKardex(
+    @GetMapping("/ventas/pdf")
+    public ResponseEntity<Resource> reporteDeVentasPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+
+        List<Venta> ventas = obtenerVentas(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        // Actualizado con los nuevos parámetros
+        ByteArrayInputStream stream = pdfExportService.exportarVentasPdf(ventas, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "ventas.pdf");
+    }
+    // ==========================================
+    // 9. COMPRAS (Registro General)
+    // ==========================================
+    @GetMapping("/compras/excel")
+    public ResponseEntity<Resource> reporteDeComprasExcel(
             @AuthenticationPrincipal ErpUserDetails userDetails,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) throws IOException {
 
-        List<Kardex> kardex;
-        if (inicio != null && fin != null) {
-            kardex = kardexRepository.findKardexPorRangoFechas(userDetails.getEmpresaId(), inicio.atStartOfDay(), fin.atTime(23, 59, 59));
-        } else {
-            // Asumiendo que crearás un findAll por empresa en tu Repo
-            throw new IllegalArgumentException("Debe enviar rango de fechas para el Kardex");
-        }
+        List<Compra> compras = obtenerCompras(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
 
-        ByteArrayInputStream stream = excelExportService.exportarKardex(kardex);
-        return generarRespuestaExcel(stream, "kardex_auditoria.xlsx");
+        ByteArrayInputStream stream = excelExportService.exportarCompras(compras, logoUrl, inicio, fin);
+        return generarRespuestaExcel(stream, "registro_compras.xlsx");
     }
+
+    @GetMapping("/compras/pdf")
+    public ResponseEntity<Resource> reporteDeComprasPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+
+        List<Compra> compras = obtenerCompras(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        ByteArrayInputStream stream = pdfExportService.exportarComprasPdf(compras, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "registro_compras.pdf");
+    }
+
+    // Pon este helper abajo, junto a tus otros métodos "obtener..."
+    private List<Compra> obtenerCompras(Integer empresaId, LocalDate inicio, LocalDate fin) {
+        if (inicio != null && fin != null) {
+            return compraRepository.findComprasPorRangoDeFechas(empresaId, inicio.atStartOfDay(), fin.atTime(23, 59, 59));
+        }
+        return compraRepository.findByEmpresaIdOrderByFechaCompraDesc(empresaId);
+    }
+    // ==========================================
+// 2. KARDEX
+// ==========================================
+    @GetMapping("/kardex/excel")
+    public ResponseEntity<Resource> reporteDeKardexExcel(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) Integer productoId) throws IOException { // <-- NUEVO PARÁMETRO
+
+        // Pasamos el productoId a la consulta
+        List<Kardex> kardex = obtenerKardex(userDetails.getEmpresaId(), inicio, fin, productoId);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        ByteArrayInputStream stream = excelExportService.exportarKardex(kardex, logoUrl, inicio, fin);
+        System.out.println("TAMAÑO DE LA LISTA PARA EXCEL: " + kardex.size()); // <-- AGREGA ESTO
+        return generarRespuestaExcel(stream, "kardex.xlsx");
+    }
+
+    @GetMapping("/kardex/pdf")
+    public ResponseEntity<Resource> reporteDeKardexPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin,
+            @RequestParam(required = false) Integer productoId) { // <-- NUEVO PARÁMETRO
+
+        // Pasamos el productoId a la consulta
+        List<Kardex> kardex = obtenerKardex(userDetails.getEmpresaId(), inicio, fin, productoId);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        ByteArrayInputStream stream = pdfExportService.exportarKardexPdf(kardex, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "kardex.pdf");
+    }
+
+    // ==========================================
+    // 3. PROVEEDORES
+    // ==========================================
     @GetMapping("/proveedores/excel")
-    public ResponseEntity<Resource> reporteDeProveedores(
-            @AuthenticationPrincipal ErpUserDetails userDetails) throws IOException {
+    public ResponseEntity<Resource> reporteDeProveedoresExcel(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) throws IOException {
 
         List<Proveedor> proveedores = proveedorRepository.findByEmpresaId(userDetails.getEmpresaId());
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
 
-        ByteArrayInputStream stream = excelExportService.exportarProveedores(proveedores);
-        return generarRespuestaExcel(stream, "directorio_proveedores.xlsx");
+        ByteArrayInputStream stream = excelExportService.exportarProveedores(proveedores, logoUrl, inicio, fin);
+        return generarRespuestaExcel(stream, "proveedores.xlsx");
     }
+
+    @GetMapping("/proveedores/pdf")
+    public ResponseEntity<Resource> reporteDeProveedoresPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+
+        List<Proveedor> proveedores = proveedorRepository.findByEmpresaId(userDetails.getEmpresaId());
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        // Actualizado con los nuevos parámetros
+        ByteArrayInputStream stream = pdfExportService.exportarProveedoresPdf(proveedores, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "proveedores.pdf");
+    }
+
+    // ==========================================
+    // 4. CLIENTES
+    // ==========================================
     @GetMapping("/clientes/excel")
-    public ResponseEntity<Resource> reporteDeClientes(
-            @AuthenticationPrincipal ErpUserDetails userDetails) throws IOException {
+    public ResponseEntity<Resource> reporteDeClientesExcel(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) throws IOException {
 
         List<Cliente> clientes = clienteRepository.findByEmpresaId(userDetails.getEmpresaId());
-        ByteArrayInputStream stream = excelExportService.exportarClientes(clientes);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
 
-        return generarRespuestaExcel(stream, "directorio_clientes.xlsx");
+        ByteArrayInputStream stream = excelExportService.exportarClientes(clientes, logoUrl, inicio, fin);
+        return generarRespuestaExcel(stream, "clientes.xlsx");
     }
+
+    @GetMapping("/clientes/pdf")
+    public ResponseEntity<Resource> reporteDeClientesPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+
+        List<Cliente> clientes = clienteRepository.findByEmpresaId(userDetails.getEmpresaId());
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        // Actualizado con los nuevos parámetros
+        ByteArrayInputStream stream = pdfExportService.exportarClientesPdf(clientes, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "clientes.pdf");
+    }
+
+    // ==========================================
+    // 5. CUENTAS POR COBRAR (Deudas Ventas)
+    // ==========================================
     @GetMapping("/creditos/pendientes/excel")
-    public ResponseEntity<Resource> reporteCuentasPorCobrar(
-            @AuthenticationPrincipal ErpUserDetails userDetails) throws IOException {
+    public ResponseEntity<Resource> reporteCuentasPorCobrarExcel(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) throws IOException {
 
-        // Reutilizamos la consulta que ya tenías para traer a los morosos
-        List<Venta> deudas = ventaRepository.findVentasConDeudaPendiente(userDetails.getEmpresaId());
+        List<Venta> deudas = obtenerDeudasVentas(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
 
-        ByteArrayInputStream stream = excelExportService.exportarDeudasPendientes(deudas);
-        return generarRespuestaExcel(stream, "cuentas_por_cobrar.xlsx");
+        ByteArrayInputStream stream = excelExportService.exportarDeudasPendientes(deudas, logoUrl, inicio, fin);
+        return generarRespuestaExcel(stream, "cuentas_cobrar.xlsx");
     }
 
-    // --- NUEVO ENDPOINT 2: HISTORIAL DE ABONOS ---
+    @GetMapping("/creditos/pendientes/pdf")
+    public ResponseEntity<Resource> reporteCuentasPorCobrarPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+
+        // Cambiado para usar el helper y respetar las fechas
+        List<Venta> deudas = obtenerDeudasVentas(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        ByteArrayInputStream stream = pdfExportService.exportarDeudasPendientesPdf(deudas, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "cuentas_cobrar.pdf");
+    }
+
+    // ==========================================
+    // 6. HISTORIAL DE ABONOS (Ventas)
+    // ==========================================
     @GetMapping("/creditos/abonos/excel")
-    public ResponseEntity<Resource> reporteHistorialAbonos(
-            @AuthenticationPrincipal ErpUserDetails userDetails) throws IOException {
+    public ResponseEntity<Resource> reporteHistorialAbonosExcel(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) throws IOException {
 
-        List<AbonoVenta> abonos = abonoVentaRepository.findByEmpresaIdOrderByFechaPagoDesc(userDetails.getEmpresaId());
+        List<AbonoVenta> abonos = obtenerAbonos(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
 
-        ByteArrayInputStream stream = excelExportService.exportarHistorialAbonos(abonos);
-        return generarRespuestaExcel(stream, "historial_pagos_credito.xlsx");
+        ByteArrayInputStream stream = excelExportService.exportarHistorialAbonos(abonos, logoUrl, inicio, fin);
+        return generarRespuestaExcel(stream, "historial_cobros.xlsx");
     }
+
+    @GetMapping("/creditos/abonos/pdf")
+    public ResponseEntity<Resource> reporteHistorialAbonosPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+
+        // Cambiado para usar el helper y respetar las fechas
+        List<AbonoVenta> abonos = obtenerAbonos(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        ByteArrayInputStream stream = pdfExportService.exportarHistorialAbonosPdf(abonos, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "historial_cobros.pdf");
+    }
+
+    // ==========================================
+    // 7. CUENTAS POR PAGAR (Deudas Compras)
+    // ==========================================
     @GetMapping("/compras/pendientes/excel")
-    public ResponseEntity<Resource> reporteCuentasPorPagar(
-            @AuthenticationPrincipal ErpUserDetails userDetails) throws IOException {
+    public ResponseEntity<Resource> reporteCuentasPorPagarExcel(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) throws IOException {
 
-        List<Compra> deudas = compraRepository.findComprasConDeudaPendiente(userDetails.getEmpresaId());
+        List<Compra> deudas = obtenerDeudasCompras(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
 
-        ByteArrayInputStream stream = excelExportService.exportarCuentasPorPagar(deudas);
-        return generarRespuestaExcel(stream, "cuentas_por_pagar.xlsx");
+        ByteArrayInputStream stream = excelExportService.exportarCuentasPorPagar(deudas, logoUrl, inicio, fin);
+        return generarRespuestaExcel(stream, "cuentas_pagar.xlsx");
     }
 
+    @GetMapping("/compras/pendientes/pdf")
+    public ResponseEntity<Resource> reporteCuentasPorPagarPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+
+        // Cambiado para usar el helper y respetar las fechas
+        List<Compra> deudas = obtenerDeudasCompras(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        ByteArrayInputStream stream = pdfExportService.exportarCuentasPorPagarPdf(deudas, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "cuentas_pagar.pdf");
+    }
+
+    // ==========================================
+    // 8. HISTORIAL DE PAGOS (Proveedores)
+    // ==========================================
     @GetMapping("/compras/pagos/excel")
-    public ResponseEntity<Resource> reporteHistorialPagosProveedores(
-            @AuthenticationPrincipal ErpUserDetails userDetails) throws IOException {
+    public ResponseEntity<Resource> reporteHistorialPagosProveedoresExcel(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) throws IOException {
 
-        List<PagoProveedor> pagos = pagoProveedorRepository.findByEmpresaIdOrderByFechaPagoDesc(userDetails.getEmpresaId());
+        List<PagoProveedor> pagos = obtenerPagosProveedores(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
 
-        ByteArrayInputStream stream = excelExportService.exportarHistorialPagosProveedores(pagos);
-        return generarRespuestaExcel(stream, "historial_pagos_proveedores.xlsx");
+        ByteArrayInputStream stream = excelExportService.exportarHistorialPagosProveedores(pagos, logoUrl, inicio, fin);
+        return generarRespuestaExcel(stream, "historial_pagos.xlsx");
+    }
+
+    @GetMapping("/compras/pagos/pdf")
+    public ResponseEntity<Resource> reporteHistorialPagosProveedoresPdf(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fin) {
+
+        // Cambiado para usar el helper y respetar las fechas
+        List<PagoProveedor> pagos = obtenerPagosProveedores(userDetails.getEmpresaId(), inicio, fin);
+        String logoUrl = obtenerLogoUrl(userDetails.getEmpresaId());
+
+        ByteArrayInputStream stream = pdfExportService.exportarHistorialPagosProveedoresPdf(pagos, logoUrl, inicio, fin);
+        return generarRespuestaPdf(stream, "historial_pagos.pdf");
+    }
+
+    // ==========================================
+    // HELPERS (Lógica reutilizable)
+    // ==========================================
+
+    private String obtenerLogoUrl(Integer empresaId) {
+        return empresaRepository.findById(empresaId)
+                .map(Empresa::getLogoUrl)
+                .orElse(null);
+    }
+
+    private List<Venta> obtenerVentas(Integer empresaId, LocalDate inicio, LocalDate fin) {
+        if (inicio != null && fin != null) {
+            return ventaRepository.findVentasPorRangoFechas(empresaId, inicio.atStartOfDay(), fin.atTime(23, 59, 59));
+        }
+        return ventaRepository.findByEmpresaIdOrderByFechaVentaDesc(empresaId);
+    }
+
+    private List<Kardex> obtenerKardex(Integer empresaId, LocalDate inicio, LocalDate fin, Integer productoId) {
+        if (inicio != null && fin != null) {
+            LocalDateTime fechaInicio = inicio.atStartOfDay();
+            LocalDateTime fechaFin = fin.atTime(23, 59, 59);
+
+            // Si enviaron un producto específico, filtramos por él
+            if (productoId != null) {
+                return kardexRepository.findKardexPorRangoFechasYProducto(empresaId, productoId, fechaInicio, fechaFin);
+            }
+            // Si no enviaron producto, traemos el kardex global de toda la empresa
+            else {
+                return kardexRepository.findKardexPorRangoFechas(empresaId, fechaInicio, fechaFin);
+            }
+        }
+        throw new IllegalArgumentException("Debe enviar rango de fechas para el Kardex");
+    }
+
+    private List<Venta> obtenerDeudasVentas(Integer empresaId, LocalDate inicio, LocalDate fin) {
+        if (inicio != null && fin != null) {
+            return ventaRepository.findVentasConDeudaPendientePorRangoFechas(empresaId, inicio.atStartOfDay(), fin.atTime(23, 59, 59));
+        }
+        return ventaRepository.findVentasConDeudaPendiente(empresaId);
+    }
+
+    private List<AbonoVenta> obtenerAbonos(Integer empresaId, LocalDate inicio, LocalDate fin) {
+        if (inicio != null && fin != null) {
+            return abonoVentaRepository.findByEmpresaIdAndFechaPagoBetweenOrderByFechaPagoDesc(empresaId, inicio.atStartOfDay(), fin.atTime(23, 59, 59));
+        }
+        return abonoVentaRepository.findByEmpresaIdOrderByFechaPagoDesc(empresaId);
+    }
+
+    private List<Compra> obtenerDeudasCompras(Integer empresaId, LocalDate inicio, LocalDate fin) {
+        if (inicio != null && fin != null) {
+            return compraRepository.findComprasConDeudaPendientePorRangoFechas(empresaId, inicio.atStartOfDay(), fin.atTime(23, 59, 59));
+        }
+        return compraRepository.findComprasConDeudaPendiente(empresaId);
+    }
+
+    private List<PagoProveedor> obtenerPagosProveedores(Integer empresaId, LocalDate inicio, LocalDate fin) {
+        if (inicio != null && fin != null) {
+            return pagoProveedorRepository.findByEmpresaIdAndFechaPagoBetweenOrderByFechaPagoDesc(empresaId, inicio.atStartOfDay(), fin.atTime(23, 59, 59));
+        }
+        return pagoProveedorRepository.findByEmpresaIdOrderByFechaPagoDesc(empresaId);
     }
 
     private ResponseEntity<Resource> generarRespuestaExcel(ByteArrayInputStream stream, String filename) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(new InputStreamResource(stream));
+    }
+
+    private ResponseEntity<Resource> generarRespuestaPdf(ByteArrayInputStream stream, String filename) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=" + filename)
+                .contentType(MediaType.APPLICATION_PDF)
                 .body(new InputStreamResource(stream));
     }
 }

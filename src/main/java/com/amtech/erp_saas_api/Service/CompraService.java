@@ -48,8 +48,7 @@ public class CompraService {
                 .comprobante(request.comprobante())
                 .fechaCompra(LocalDateTime.now())
                 .estado(Compra.EstadoCompra.COMPLETADA)
-                .total(BigDecimal.ZERO)
-                .build();
+                .build(); // Quitamos el total(BigDecimal.ZERO) de aquí porque lo setearemos abajo
 
         List<Lote> listaLotes = new ArrayList<>();
         BigDecimal totalCompra = BigDecimal.ZERO;
@@ -75,7 +74,20 @@ public class CompraService {
         }
 
         compra.setLotes(listaLotes);
+
+        // =========================================================================
+        // ↓ NUEVA LÓGICA DE CÁLCULO DE IGV ↓
+        // =========================================================================
+        BigDecimal porcentajeIgv = request.igvPorcentaje();
+        BigDecimal divisorIgv = BigDecimal.ONE.add(porcentajeIgv.divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP));
+
+        BigDecimal subtotalSinImpuesto = totalCompra.divide(divisorIgv, 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal impuestoTotal = totalCompra.subtract(subtotalSinImpuesto);
+
+        compra.setSubtotalSinImpuesto(subtotalSinImpuesto);
+        compra.setImpuestoTotal(impuestoTotal);
         compra.setTotal(totalCompra);
+        // =========================================================================
 
         // --- LÓGICA DE CRÉDITOS ---
         String condicion = request.condicionPago() != null ? request.condicionPago().toUpperCase() : "CONTADO";
@@ -180,7 +192,7 @@ public class CompraService {
                 )).toList();
 
         return new CompraResponseDTO(
-                c.getId(), c.getEmpresa().getId(), c.getProveedor().getId(), c.getProveedor().getRazonSocial(),
+                c.getId(), c.getEmpresa().getId(), c.getProveedor().getId(), c.getProveedor().getRazonSocial(), c.getProveedor().getDocumentoIdentidad(),
                 c.getUsuario().getId(), c.getUsuario().getUsername(), c.getFechaCompra(), c.getComprobante(),
                 c.getTotal(), c.getEstado().name(),
                 c.getCondicionPago() != null ? c.getCondicionPago().name() : "CONTADO",

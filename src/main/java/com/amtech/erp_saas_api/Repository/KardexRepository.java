@@ -28,17 +28,6 @@ public interface KardexRepository extends JpaRepository<Kardex, Long> {
         """)
     List<Kardex> findKardexPorProducto(@Param("productoId") Integer productoId, @Param("empresaId") Integer empresaId);
 
-    @Query("""
-        SELECT k FROM Kardex k 
-        WHERE k.lote.producto.empresa.id = :empresaId 
-          AND k.fechaMovimiento BETWEEN :inicio AND :fin 
-        ORDER BY k.fechaMovimiento DESC
-        """)
-    List<Kardex> findKardexPorRangoFechas(
-            @Param("empresaId") Integer empresaId,
-            @Param("inicio") LocalDateTime inicio,
-            @Param("fin") LocalDateTime fin
-    );
 
     @Query("""
         SELECT k FROM Kardex k 
@@ -49,5 +38,22 @@ public interface KardexRepository extends JpaRepository<Kardex, Long> {
     List<Kardex> findKardexPorTipoMovimiento(
             @Param("empresaId") Integer empresaId,
             @Param("tipo") Kardex.TipoMovimiento tipo
+    );
+
+    // 1. La consulta GLOBAL (Corregida)
+    @Query("SELECT k FROM Kardex k WHERE k.lote.producto.empresa.id = :empresaId AND k.fechaMovimiento BETWEEN :inicio AND :fin")
+    List<Kardex> findKardexPorRangoFechas(
+            @Param("empresaId") Integer empresaId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin
+    );
+
+    // 2. La consulta ESPECÍFICA POR PRODUCTO
+    @Query("SELECT k FROM Kardex k LEFT JOIN k.lote l LEFT JOIN l.producto p WHERE p.empresa.id = :empresaId AND p.id = :productoId AND k.fechaMovimiento BETWEEN :inicio AND :fin")
+    List<Kardex> findKardexPorRangoFechasYProducto(
+            @Param("empresaId") Integer empresaId,
+            @Param("productoId") Integer productoId,
+            @Param("inicio") LocalDateTime inicio,
+            @Param("fin") LocalDateTime fin
     );
 }

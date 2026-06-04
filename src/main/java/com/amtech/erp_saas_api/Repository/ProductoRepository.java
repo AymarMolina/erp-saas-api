@@ -40,4 +40,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Integer> {
     @Modifying
     @Query("UPDATE Producto p SET p.stockReservado = p.stockReservado - :cantidad WHERE p.id = :productoId")
     void restarStockReservado(@Param("productoId") Integer productoId, @Param("cantidad") BigDecimal cantidad);
+
+    @Query("SELECT p FROM Producto p WHERE p.empresa.id = :empresaId AND p.stockFisico <= 10 AND p.estado = true ORDER BY p.stockFisico ASC")
+    List<Producto> findTop5StockCritico(@Param("empresaId") Integer empresaId, org.springframework.data.domain.Pageable pageable);
 }

@@ -1,5 +1,7 @@
 package com.amtech.erp_saas_api.DTO.Response;
 
+import jakarta.persistence.Column;
+
 import java.time.LocalDateTime;
 
 public record UsuarioResponseDTO(
@@ -10,5 +12,6 @@ public record UsuarioResponseDTO(
         Integer rolId,
         String rolNombre,
         Boolean estado,
-        LocalDateTime fechaCreacion
+        LocalDateTime fechaCreacion,
+        String fotoUrl
 ) {}

@@ -1,5 +1,6 @@
 package com.amtech.erp_saas_api.Controller;
 
+import com.amtech.erp_saas_api.DTO.Request.PerfilRequestDTO;
 import com.amtech.erp_saas_api.DTO.Request.UsuarioRequestDTO;
 import com.amtech.erp_saas_api.DTO.Response.UsuarioResponseDTO;
 import com.amtech.erp_saas_api.Security.ErpUserDetails;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -80,5 +82,27 @@ public class UsuarioController {
 
         return ResponseEntity.ok(
                 usuarioService.listarPorEmpresa(userDetails.getEmpresaId()));
+    }
+
+    @PatchMapping("/perfil/foto")
+    public ResponseEntity<UsuarioResponseDTO> subirFotoPerfil(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestParam("archivo") MultipartFile archivo) {
+        return ResponseEntity.ok(
+                usuarioService.actualizarFotoPerfil(userDetails.getUsuarioId(), userDetails.getEmpresaId(), archivo)
+        );
+    }
+    @PutMapping("/perfil")
+    public ResponseEntity<UsuarioResponseDTO> actualizarMiPerfil(
+            @AuthenticationPrincipal ErpUserDetails userDetails,
+            @RequestBody PerfilRequestDTO request) {
+
+        return ResponseEntity.ok(
+                usuarioService.actualizarMiPerfil(
+                        userDetails.getUsuarioId(),
+                        userDetails.getEmpresaId(),
+                        request
+                )
+        );
     }
 }

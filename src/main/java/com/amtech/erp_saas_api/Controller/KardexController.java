@@ -2,7 +2,7 @@ package com.amtech.erp_saas_api.Controller;
 
 import com.amtech.erp_saas_api.DTO.Request.KardexAjusteRequestDTO;
 import com.amtech.erp_saas_api.DTO.Response.KardexResponseDTO;
-import com.amtech.erp_saas_api.Security.ErpUserDetails; 
+import com.amtech.erp_saas_api.Security.ErpUserDetails;
 import com.amtech.erp_saas_api.Service.KardexService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

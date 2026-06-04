@@ -7,7 +7,9 @@ import com.amtech.erp_saas_api.Repository.EmpresaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -16,6 +18,7 @@ import java.util.List;
 public class   EmpresaService {
 
     private final EmpresaRepository empresaRepository;
+    private final ArchivoService archivoService;
 
     @Transactional
     public EmpresaResponseDTO registrarEmpresa(EmpresaRequestDTO request) {
@@ -68,7 +71,39 @@ public class   EmpresaService {
                 empresa.getRuc(),
                 empresa.getPlanSuscripcion(),
                 empresa.getEstado(),
-                empresa.getFechaRegistro()
+                empresa.getFechaRegistro(),
+                empresa.getLogoUrl(),
+                empresa.getIgvPorcentaje()
         );
+    }
+    @Transactional
+    public EmpresaResponseDTO actualizarLogo(Integer empresaId, MultipartFile archivo) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new RuntimeException("Empresa no encontrada con ID: " + empresaId));
+
+        if (empresa.getLogoUrl() != null && !empresa.getLogoUrl().isBlank()) {
+            archivoService.eliminar(empresa.getLogoUrl());
+        }
+
+        String url = archivoService.guardar(archivo, "logos");
+
+        empresa.setLogoUrl(url);
+        empresa.setLogoNombreArchivo(archivo.getOriginalFilename());
+        empresa.setLogoFechaActualizacion(LocalDateTime.now());
+
+        return mapearAResponse(empresaRepository.save(empresa));
+    }
+    @Transactional
+    public EmpresaResponseDTO actualizarIgv(Integer empresaId, BigDecimal porcentaje) {
+        Empresa empresa = empresaRepository.findById(empresaId)
+                .orElseThrow(() -> new RuntimeException("Empresa no encontrada"));
+
+        // Validación básica: IGV entre 0 y 100
+        if (porcentaje.compareTo(BigDecimal.ZERO) < 0 || porcentaje.compareTo(new BigDecimal("100")) > 0) {
+            throw new IllegalArgumentException("El porcentaje de IGV debe estar entre 0 y 100");
+        }
+
+        empresa.setIgvPorcentaje(porcentaje);
+        return mapearAResponse(empresaRepository.save(empresa));
     }
 }

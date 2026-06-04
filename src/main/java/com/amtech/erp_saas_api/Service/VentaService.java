@@ -84,14 +84,16 @@ public class VentaService {
                         .subtotal(subtotalDetalle)
                         .build();
 
-                lote.setCantidadActual(lote.getCantidadActual().subtract(cantidadATomar));
                 listaDetalles.add(detalle);
                 totalVenta = totalVenta.add(subtotalDetalle);
                 cantidadFaltantePorAsignar = cantidadFaltantePorAsignar.subtract(cantidadATomar);
             }
         }
 
-        BigDecimal subtotalSinImpuesto = totalVenta.divide(BigDecimal.valueOf(1.18), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal porcentajeIgv = request.igvPorcentaje();
+
+        BigDecimal divisorIgv = BigDecimal.ONE.add(porcentajeIgv.divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP));
+        BigDecimal subtotalSinImpuesto = totalVenta.divide(divisorIgv, 2, java.math.RoundingMode.HALF_UP);
         BigDecimal impuestoTotal = totalVenta.subtract(subtotalSinImpuesto);
 
         venta.setSubtotalSinImpuesto(subtotalSinImpuesto);

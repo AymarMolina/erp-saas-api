@@ -2,6 +2,8 @@ package com.amtech.erp_saas_api.Entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -63,5 +65,17 @@ public class Empresa {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Producto> productos;
+
+    @Column(name = "logo_url", length = 500)
+    private String logoUrl;
+
+    @Column(name = "logo_nombre_archivo", length = 255)
+    private String logoNombreArchivo;
+
+    @Column(name = "logo_fecha_actualizacion")
+    private LocalDateTime logoFechaActualizacion;
+
+    @Column(name = "igv_porcentaje", nullable = false)
+    private BigDecimal igvPorcentaje;
 }
 
